@@ -1,0 +1,37 @@
+> npx tsx src/server/index.ts
+
+Connection successful!
+Starting Peril server...
+^CSHUTTING DOWN...
+chrisdecker@Deckers-MacBook-Pro learn-pub-sub-typescript-starter % npm run server
+
+
+
+> server
+> npx tsx src/server/index.ts
+
+Connection successful!
+Starting Peril server...
+^C shutting down...
+chrisdecker@Deckers-MacBook-Pro learn-pub-sub-typescript-starter % docker build -t rabbitmq-stomp .
+[+] Building 0.6s (6/6) FINISHED                                                                                                                                                                                            docker:desktop-linux
+ => [internal] load build definition from Dockerfile                                                                                                                                                                                        0.0s
+ => => transferring dockerfile: 109B                                                                                                                                                                                                        0.0s
+ => [internal] load metadata for docker.io/library/rabbitmq:3.13-management                                                                                                                                                                 0.0s
+ => [internal] load .dockerignore                                                                                                                                                                                                           0.0s
+ => => transferring context: 2B                                                                                                                                                                                                             0.0s
+ => [1/2] FROM docker.io/library/rabbitmq:3.13-management                                                                                                                                                                                   0.0s
+ => [2/2] RUN rabbitmq-plugins enable rabbitmq_stomp                                                                                                                                                                                        0.6s
+ => exporting to image                                                                                                                                                                                                                      0.0s
+ => => exporting layers                                                                                                                                                                                                                     0.0s
+ => => writing image sha256:9b11c1757b498128bb09260e7e6c600c950957826414f34ee35bc9c16a401969                                                                                                                                                0.0s
+ => => naming to docker.io/library/rabbitmq-stomp                                                                                                                                                                                           0.0s
+
+What's next:
+    View a summary of image vulnerabilities and recommendations → docker scout quickview
+chrisdecker@Deckers-MacBook-Pro learn-pub-sub-typescript-starter % ./rabbit.sh stop
+zsh: no such file or directory: ./rabbit.sh
+chrisdecker@Deckers-MacBook-Pro learn-pub-sub-typescript-starter % docker run -d --name peril_rabbitmq -p 5672:61613 -p 15672:161613 rabbitmq-stomp
+docker: invalid containerPort: 161613
+
+Run 'docker run --help' for more information
