@@ -1,6 +1,6 @@
 import amqp from "amqplib";
 import { publishJSON } from "../internal/pubsub/publish.js";
-import { ExchangePerilDirect, PauseKey, QuitKey, ResumeKey } from "../internal/routing/routing.js";
+import { COMMAND_TYPES, ExchangePerilDirect } from "../internal/routing/routing.js";
 import { getInput, printServerHelp } from "../internal/gamelogic/gamelogic.js";
 
 async function main() {
@@ -27,36 +27,38 @@ async function main() {
   printServerHelp()
 
   while (true) {
-    const [command] = await getInput('Enter command: ');
+    const words = await getInput('Enter command: ');
+    const [command] = words;
     if (!command) {
       continue;
     }
-    if (command === PauseKey) {
-      console.log(`Publishing "${PauseKey}" game state...`);
+    if (command === COMMAND_TYPES.pause) {
+      console.log(`Publishing "${COMMAND_TYPES.pause}" game state...`);
 
       try {
-        await publishJSON(publishCh, ExchangePerilDirect, PauseKey, {
+        await publishJSON(publishCh, ExchangePerilDirect, COMMAND_TYPES.pause, {
           isPaused: true,
         });
       } catch (err) {
         console.error("Error publishing message:", err);
       }
-    } else if (command === ResumeKey) {
-      console.log(`Publishing "${ResumeKey}" game state...`);
+    } else if (command === COMMAND_TYPES.resume) {
+      console.log(`Publishing "${COMMAND_TYPES.resume}" game state...`);
 
       try {
-        await publishJSON(publishCh, ExchangePerilDirect, PauseKey, {
+        await publishJSON(publishCh, ExchangePerilDirect, COMMAND_TYPES.pause, {
           isPaused: false,
         });
       } catch (err) {
         console.error("Error publishing message:", err);
       }
-    } else if (command === QuitKey) {
+    } else if (command === COMMAND_TYPES.quit) {
       console.log(`Goodbye!`);
       process.exit(0)
     } else {
       console.log("Unknown command")
     }
+
   }
 }
 
