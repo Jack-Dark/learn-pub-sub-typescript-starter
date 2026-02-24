@@ -1,6 +1,7 @@
 import amqp from "amqplib";
 import { publishJSON } from "../internal/pubsub/publish.js";
-import { ExchangePerilDirect, PauseKey } from "../internal/routing/routing.js";
+import { ExchangePerilDirect, PauseKey, QuitKey, ResumeKey } from "../internal/routing/routing.js";
+import { getInput, printServerHelp } from "../internal/gamelogic/gamelogic.js";
 
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
@@ -23,9 +24,32 @@ async function main() {
   const publishCh = await conn.createConfirmChannel();
 
   try {
-    await publishJSON(publishCh, ExchangePerilDirect, PauseKey, {
-      isPaused: true,
-    });
+    printServerHelp()
+
+    while (Infinity) {
+      const [command] = await getInput('Enter command: ');
+      if (!command) {
+        continue;
+      }
+      if (command === PauseKey) {
+        console.log(`Sending "${PauseKey}" message...`);
+
+        await publishJSON(publishCh, ExchangePerilDirect, PauseKey, {
+          isPaused: true,
+        });
+      } else if (command === ResumeKey) {
+        console.log(`Sending "${ResumeKey}" message...`);
+
+        await publishJSON(publishCh, ExchangePerilDirect, PauseKey, {
+          isPaused: false,
+        });
+      } else if (command === QuitKey) {
+        console.log(`Exiting...`);
+        break;
+      } else {
+        console.log("Command not recognized")
+      }
+    }
   } catch (err) {
     console.error("Error publishing message:", err);
   }
