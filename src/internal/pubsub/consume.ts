@@ -35,17 +35,27 @@ export async function subscribeJSON<T>(
   queueType: SimpleQueueType, // an enum to represent "durable" or "transient"
   handler: (data: T) => void,
 ): Promise<void> {
-  const [channel, { queue }] = await declareAndBind(conn, exchange, queueName, key, queueType);
+  const [ch, queue] = await declareAndBind(
+    conn,
+    exchange,
+    queueName,
+    key,
+    queueType,
+  );
 
-  channel.consume(queue, (message) => {
-    if (message === null) {
+  await ch.consume(queue.queue, function (msg) {
+    if (!msg) return;
+
+    let data: T;
+    try {
+      data = JSON.parse(msg.content.toString());
+    } catch (err) {
+      console.error("Could not unmarshal message:", err);
       return;
     }
 
-    const content = JSON.parse(message.content.toString());
-    handler(content);
-
-    channel.ack(message)
-  })
+    handler(data);
+    ch.ack(msg);
+  });
 
 }

@@ -27,14 +27,6 @@ async function main() {
 
   const username = await clientWelcome();
 
-  await declareAndBind(
-    conn,
-    ExchangePerilDirect,
-    `${COMMAND_TYPES.pause}.${username}`,
-    COMMAND_TYPES.pause,
-    SimpleQueueType.Transient,
-  );
-
   const gs = new GameState(username)
 
   subscribeJSON(

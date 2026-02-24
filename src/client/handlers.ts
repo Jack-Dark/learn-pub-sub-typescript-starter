@@ -4,6 +4,6 @@ import { handlePause } from "../internal/gamelogic/pause.js";
 export function handlerPause(gs: GameState) {
   return function (ps: PlayingState) {
     handlePause(gs, ps);
-    console.log('> ');
+    process.stdout.write("> ");
   }
 }
