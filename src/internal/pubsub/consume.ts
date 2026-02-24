@@ -26,3 +26,26 @@ export async function declareAndBind(
 
   return [channel, queue];
 }
+
+export async function subscribeJSON<T>(
+  conn: ChannelModel,
+  exchange: string,
+  queueName: string,
+  key: string,
+  queueType: SimpleQueueType, // an enum to represent "durable" or "transient"
+  handler: (data: T) => void,
+): Promise<void> {
+  const [channel, { queue }] = await declareAndBind(conn, exchange, queueName, key, queueType);
+
+  channel.consume(queue, (message) => {
+    if (message === null) {
+      return;
+    }
+
+    const content = JSON.parse(message.content.toString());
+    handler(content);
+
+    channel.ack(message)
+  })
+
+}
