@@ -23,35 +23,40 @@ async function main() {
 
   const publishCh = await conn.createConfirmChannel();
 
-  try {
-    printServerHelp()
 
-    while (Infinity) {
-      const [command] = await getInput('Enter command: ');
-      if (!command) {
-        continue;
-      }
-      if (command === PauseKey) {
-        console.log(`Sending "${PauseKey}" message...`);
+  printServerHelp()
 
+  while (true) {
+    const [command] = await getInput('Enter command: ');
+    if (!command) {
+      continue;
+    }
+    if (command === PauseKey) {
+      console.log(`Publishing "${PauseKey}" game state...`);
+
+      try {
         await publishJSON(publishCh, ExchangePerilDirect, PauseKey, {
           isPaused: true,
         });
-      } else if (command === ResumeKey) {
-        console.log(`Sending "${ResumeKey}" message...`);
+      } catch (err) {
+        console.error("Error publishing message:", err);
+      }
+    } else if (command === ResumeKey) {
+      console.log(`Publishing "${ResumeKey}" game state...`);
 
+      try {
         await publishJSON(publishCh, ExchangePerilDirect, PauseKey, {
           isPaused: false,
         });
-      } else if (command === QuitKey) {
-        console.log(`Exiting...`);
-        break;
-      } else {
-        console.log("Command not recognized")
+      } catch (err) {
+        console.error("Error publishing message:", err);
       }
+    } else if (command === QuitKey) {
+      console.log(`Goodbye!`);
+      process.exit(0)
+    } else {
+      console.log("Unknown command")
     }
-  } catch (err) {
-    console.error("Error publishing message:", err);
   }
 }
 
