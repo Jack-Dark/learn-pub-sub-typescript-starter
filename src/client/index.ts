@@ -1,11 +1,12 @@
 import amqp from "amqplib";
 import { clientWelcome, commandStatus, getInput, printClientHelp, printQuit } from "../internal/gamelogic/gamelogic.js";
 import { declareAndBind, SimpleQueueType, subscribeJSON } from "../internal/pubsub/consume.js";
-import { COMMAND_TYPES, ExchangePerilDirect } from "../internal/routing/routing.js";
+import { ArmyMovesPrefix, COMMAND_TYPES, ExchangePerilDirect, ExchangePerilTopic } from "../internal/routing/routing.js";
 import { GameState } from "../internal/gamelogic/gamestate.js";
 import { commandSpawn } from "../internal/gamelogic/spawn.js";
-import { commandMove } from "../internal/gamelogic/move.js";
-import { handlerPause } from "./handlers.js";
+import { commandMove, handleMove } from "../internal/gamelogic/move.js";
+import { handlerMove, handlerPause } from "./handlers.js";
+import { publishJSON } from "../internal/pubsub/publish.js";
 
 async function main() {
   const rabbitConnString = "amqp://guest:guest@localhost:5672/";
@@ -26,8 +27,17 @@ async function main() {
   );
 
   const username = await clientWelcome();
+  const gs = new GameState(username);
+  const publishCh = await conn.createConfirmChannel();
 
-  const gs = new GameState(username)
+  subscribeJSON(
+    conn,
+    ExchangePerilTopic,
+    `${ArmyMovesPrefix}.${username}`,
+    `${ArmyMovesPrefix}.*`,
+    SimpleQueueType.Transient,
+    handlerMove(gs),
+  );
 
   subscribeJSON(
     conn,
@@ -37,6 +47,7 @@ async function main() {
     SimpleQueueType.Transient,
     handlerPause(gs),
   );
+
 
   while (true) {
     const words = await getInput('Enter command: ');
@@ -50,7 +61,13 @@ async function main() {
       }
     } else if (command === COMMAND_TYPES.move) {
       try {
-        commandMove(gs, words);
+        const move = commandMove(gs, words);
+        await publishJSON(
+          publishCh,
+          ExchangePerilTopic,
+          `${ArmyMovesPrefix}.${username}`,
+          move
+        );
       } catch (err) {
         console.log((err as Error).message);
       }
