@@ -7,6 +7,7 @@ import { AckType } from "../internal/pubsub/consume.js";
 import { publishJSON } from "../internal/pubsub/publish.js";
 import { ExchangePerilTopic, WarRecognitionsPrefix } from "../internal/routing/routing.js";
 import { handleWar, WarOutcome } from "../internal/gamelogic/war.js";
+import { publishGameLog } from "./index.js";
 
 export function handlerPause(gs: GameState) {
   return function (ps: PlayingState) {
@@ -53,10 +54,11 @@ export function handlerMove(gs: GameState,
   };
 }
 
-export function handlerWar(gs: GameState) {
+export function handlerWar(gs: GameState, ch: ConfirmChannel) {
   return (rw: RecognitionOfWar): AckType => {
     try {
       const outcome = handleWar(gs, rw);
+
       switch (outcome.result) {
         case WarOutcome.NotInvolved:
           return AckType.NackRequeue;
@@ -65,10 +67,35 @@ export function handlerWar(gs: GameState) {
           return AckType.NackDiscard;
 
         case WarOutcome.OpponentWon:
-        case WarOutcome.YouWon:
-        case WarOutcome.Draw:
-          return AckType.Ack;
+        case WarOutcome.YouWon: {
+          try {
+            const message = `${outcome.winner} won a war against ${outcome.loser}`;
 
+            publishGameLog({
+              ch, message, username: gs.getUsername(),
+            })
+
+            return AckType.Ack;
+
+          } catch (error) {
+            return AckType.NackRequeue
+          }
+        }
+
+        case WarOutcome.Draw: {
+          try {
+            const message = `A war between ${outcome.attacker} and ${outcome.defender} resulted in a draw`;
+
+            publishGameLog({
+              ch, message, username: gs.getUsername(),
+            })
+
+
+            return AckType.Ack;
+          } catch (error) {
+            return AckType.NackRequeue
+          }
+        }
         default:
           const unreachable: never = outcome;
           console.log("Unexpected war resolution: ", unreachable);
