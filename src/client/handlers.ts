@@ -17,7 +17,7 @@ export function handlerPause(gs: GameState) {
 }
 
 export function handlerMove(gs: GameState,
-  publishCh: ConfirmChannel) {
+  ch: ConfirmChannel) {
   return async (
     move: ArmyMove,
   ): Promise<AckType> => {
@@ -26,24 +26,24 @@ export function handlerMove(gs: GameState,
       switch (outcome) {
         case MoveOutcome.Safe:
           return AckType.Ack;
-        case MoveOutcome.MakeWar: {
-          if (outcome === MoveOutcome.MakeWar) {
-            const defender = gs.getPlayerSnap();
-            const rw: RecognitionOfWar = {
-              attacker: move.player,
-              defender,
-            };
+        case MoveOutcome.MakeWar:
+          const recognition: RecognitionOfWar = {
+            attacker: move.player,
+            defender: gs.getPlayerSnap(),
+          };
 
+          try {
             await publishJSON(
-              publishCh,
+              ch,
               ExchangePerilTopic,
-              `${WarRecognitionsPrefix}.${defender.username}`,
-              rw
+              `${WarRecognitionsPrefix}.${gs.getUsername()}`,
+              recognition,
             );
+            return AckType.Ack;
+          } catch (err) {
+            console.error("Error publishing war recognition:", err);
+            return AckType.NackRequeue;
           }
-          return AckType.NackRequeue;
-
-        }
         default:
           return AckType.NackDiscard;
       }
@@ -56,8 +56,8 @@ export function handlerMove(gs: GameState,
 export function handlerWar(gs: GameState) {
   return (rw: RecognitionOfWar): AckType => {
     try {
-      const resolution = handleWar(gs, rw);
-      switch (resolution.result) {
+      const outcome = handleWar(gs, rw);
+      switch (outcome.result) {
         case WarOutcome.NotInvolved:
           return AckType.NackRequeue;
 
@@ -70,7 +70,9 @@ export function handlerWar(gs: GameState) {
           return AckType.Ack;
 
         default:
-          console.log(`Error: Unknown war outcome`);
+          const unreachable: never = outcome;
+          console.log("Unexpected war resolution: ", unreachable);
+
           return AckType.NackDiscard;
       }
     } finally {
