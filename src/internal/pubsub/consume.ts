@@ -1,6 +1,6 @@
 import {
   type Channel,
-  type ChannelModel, type Replies
+  type ChannelModel, type ConfirmChannel, type Replies
 } from "amqplib";
 
 export enum AckType {
@@ -42,7 +42,7 @@ export async function subscribeJSON<T>(
   queueName: string,
   key: string,
   queueType: SimpleQueueType, // an enum to represent "durable" or "transient"
-  handler: (data: T) => AckType,
+  handler: (data: T) => Promise<AckType> | AckType,
 ): Promise<void> {
   const [ch, queue] = await declareAndBind(
     conn,
@@ -52,7 +52,7 @@ export async function subscribeJSON<T>(
     queueType,
   );
 
-  await ch.consume(queue.queue, function (msg) {
+  await ch.consume(queue.queue, async function (msg) {
     if (!msg) return;
 
     let data: T;
@@ -64,7 +64,7 @@ export async function subscribeJSON<T>(
     }
 
     try {
-      const result = handler(data);
+      const result = await handler(data);
       switch (result) {
         case AckType.Ack:
           ch.ack(msg);
