@@ -8,13 +8,9 @@ import {
 } from '../internal/routing/routing.js';
 import { getInput, printServerHelp } from '../internal/gamelogic/gamelogic.js';
 import {
-  AckType,
-  declareAndBind,
   SimpleQueueType,
   subscribeMsgPack,
 } from '../internal/pubsub/consume.js';
-import { handleMove } from '../internal/gamelogic/move.js';
-import { writeLog, type GameLog } from '../internal/gamelogic/logs.js';
 import { handlerLog } from './handlers.js';
 
 async function main() {

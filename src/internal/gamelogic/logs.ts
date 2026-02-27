@@ -1,4 +1,4 @@
-import { appendFile } from "fs/promises";
+import { appendFile } from 'fs/promises';
 
 export interface GameLog {
   currentTime: Date;
@@ -6,16 +6,18 @@ export interface GameLog {
   username: string;
 }
 
-const logsFile = "game.log";
+const logsFile = 'game.log';
 const writeToDiskSleep = 1000;
 
 function block(ms: number) {
   const end = Date.now() + ms;
-  while (Date.now() < end) {}
+  while (Date.now() < end) {
+    // ?
+  }
 }
 
 export async function writeLog(gameLog: GameLog): Promise<void> {
-  console.log("received game log...");
+  console.log('received game log...');
   block(writeToDiskSleep);
 
   const date = new Date(gameLog.currentTime);
@@ -23,7 +25,7 @@ export async function writeLog(gameLog: GameLog): Promise<void> {
   const logEntry = `${timestamp} ${gameLog.username}: ${gameLog.message}\n`;
 
   try {
-    await appendFile(logsFile, logEntry, { flag: "a" });
+    await appendFile(logsFile, logEntry, { flag: 'a' });
   } catch (err) {
     throw new Error(`could not write to logs file: ${err}`);
   }
