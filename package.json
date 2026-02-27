@@ -14,9 +14,15 @@
     "amqplib": "^0.10.9"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@stylistic/eslint-plugin": "^5.9.0",
     "@types/amqplib": "^0.10.7",
     "@types/node": "^20.0.0",
-    "tsx": "^3.7.0",
-    "typescript": "^4.4.0"
+    "eslint": "^10.0.2",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "globals": "^17.3.0",
+    "jiti": "^2.6.1",
+    "typescript": "^4.4.0",
+    "typescript-eslint": "^8.56.1"
   }
 }
