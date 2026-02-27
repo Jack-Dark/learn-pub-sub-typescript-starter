@@ -1,5 +1,5 @@
-import { encode } from '@msgpack/msgpack'
-import { type ConfirmChannel } from "amqplib";
+import { encode } from '@msgpack/msgpack';
+import { type ConfirmChannel } from 'amqplib';
 
 export function publishJSON<T>(
   ch: ConfirmChannel,
@@ -14,10 +14,10 @@ export function publishJSON<T>(
       exchange,
       routingKey,
       content,
-      { contentType: "application/json" },
+      { contentType: 'application/json' },
       (err) => {
         if (err !== null) {
-          reject(new Error("Message was NACKed by the broker"));
+          reject(new Error('Message was NACKed by the broker'));
         } else {
           resolve();
         }
@@ -32,7 +32,6 @@ export function publishMsgPack<T>(
   routingKey: string,
   value: T,
 ): Promise<void> {
-
   const content = Buffer.from(encode(value));
 
   return new Promise((resolve, reject) => {
@@ -40,10 +39,10 @@ export function publishMsgPack<T>(
       exchange,
       routingKey,
       content,
-      { contentType: "application/x-msgpack" },
+      { contentType: 'application/x-msgpack' },
       (err) => {
         if (err !== null) {
-          reject(new Error("Message was NACKed by the broker"));
+          reject(new Error('Message was NACKed by the broker'));
         } else {
           resolve();
         }
