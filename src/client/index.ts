@@ -3,6 +3,7 @@ import {
   clientWelcome,
   commandStatus,
   getInput,
+  getMaliciousLog,
   printClientHelp,
   printQuit,
 } from '../internal/gamelogic/gamelogic.js';
@@ -73,7 +74,7 @@ async function main() {
 
   while (true) {
     const words = await getInput('Enter command: ');
-    const [command] = words;
+    const [command, spamValue] = words;
 
     if (command === COMMAND_TYPES.spawn) {
       try {
@@ -98,7 +99,32 @@ async function main() {
     } else if (command === COMMAND_TYPES.help) {
       printClientHelp();
     } else if (command === COMMAND_TYPES.spam) {
-      console.log('Spamming not allowed yet!');
+      if (spamValue) {
+        const spamNum = parseInt(spamValue);
+        if (isNaN(spamNum)) {
+          console.log(`error: ${spamValue} is not a valid number`);
+          continue;
+        }
+
+        for (let i = 1; i <= spamNum; i++) {
+          try {
+            publishJSON(
+              publishCh,
+              ExchangePerilTopic,
+              `${GameLogSlug}.${username}`,
+              getMaliciousLog(),
+            );
+          } catch (err) {
+            console.error(
+              'Failed to publish spam message:',
+              (err as Error).message,
+            );
+            continue;
+          }
+        }
+      } else {
+        console.log('usage: spam <n>');
+      }
     } else if (command === COMMAND_TYPES.quit) {
       printQuit();
       process.exit(0);

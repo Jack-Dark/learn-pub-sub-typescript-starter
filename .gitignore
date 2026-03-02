@@ -2,3 +2,4 @@ node_modules
 /FEEDBACK.MD
 *.log
 /.vscode
+.DS_Store
