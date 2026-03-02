@@ -1,5 +1,5 @@
-import { encode } from '@msgpack/msgpack';
 import { type ConfirmChannel } from 'amqplib';
+import { encode } from '@msgpack/msgpack';
 
 export function publishJSON<T>(
   ch: ConfirmChannel,
@@ -32,13 +32,12 @@ export function publishMsgPack<T>(
   routingKey: string,
   value: T,
 ): Promise<void> {
-  const content = Buffer.from(encode(value));
-
+  const body = encode(value);
   return new Promise((resolve, reject) => {
     ch.publish(
       exchange,
       routingKey,
-      content,
+      Buffer.from(body),
       { contentType: 'application/x-msgpack' },
       (err) => {
         if (err !== null) {

@@ -1,5 +1,5 @@
 import { decode } from '@msgpack/msgpack';
-import { type Channel, type ChannelModel, type Replies } from 'amqplib';
+import amqp, { type Channel } from 'amqplib';
 
 export enum AckType {
   Ack,
@@ -13,29 +13,29 @@ export enum SimpleQueueType {
 }
 
 export async function declareAndBind(
-  conn: ChannelModel,
+  conn: amqp.ChannelModel,
   exchange: string,
   queueName: string,
   key: string,
   queueType: SimpleQueueType,
-): Promise<[Channel, Replies.AssertQueue]> {
-  const channel = await conn.createChannel();
-  const queue = await channel.assertQueue(queueName, {
+): Promise<[Channel, amqp.Replies.AssertQueue]> {
+  const ch = await conn.createChannel();
+
+  const queue = await ch.assertQueue(queueName, {
     durable: queueType === SimpleQueueType.Durable,
-    autoDelete: queueType === SimpleQueueType.Transient,
-    exclusive: queueType === SimpleQueueType.Transient,
+    exclusive: queueType !== SimpleQueueType.Durable,
+    autoDelete: queueType !== SimpleQueueType.Durable,
     arguments: {
       'x-dead-letter-exchange': 'peril_dlx',
     },
   });
 
-  await channel.bindQueue(queueName, exchange, key);
-
-  return [channel, queue];
+  await ch.bindQueue(queue.queue, exchange, key);
+  return [ch, queue];
 }
 
 export async function subscribe<T>(
-  conn: ChannelModel,
+  conn: amqp.ChannelModel,
   exchange: string,
   queueName: string,
   routingKey: string,
@@ -55,7 +55,7 @@ export async function subscribe<T>(
 
   await ch.consume(
     queue.queue,
-    async (msg) => {
+    async (msg: amqp.ConsumeMessage | null) => {
       if (!msg) return;
 
       let data: T;
@@ -92,7 +92,7 @@ export async function subscribe<T>(
 }
 
 export async function subscribeJSON<T>(
-  conn: ChannelModel,
+  conn: amqp.ChannelModel,
   exchange: string,
   queueName: string,
   key: string,
@@ -105,7 +105,7 @@ export async function subscribeJSON<T>(
 }
 
 export async function subscribeMsgPack<T>(
-  conn: ChannelModel,
+  conn: amqp.ChannelModel,
   exchange: string,
   queueName: string,
   key: string,

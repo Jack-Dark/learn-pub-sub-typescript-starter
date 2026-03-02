@@ -1,10 +1,10 @@
 import amqp from 'amqplib';
 import { publishJSON } from '../internal/pubsub/publish.js';
 import {
-  COMMAND_TYPES,
   ExchangePerilDirect,
   ExchangePerilTopic,
   GameLogSlug,
+  PauseKey,
 } from '../internal/routing/routing.js';
 import { getInput, printServerHelp } from '../internal/gamelogic/gamelogic.js';
 import {
@@ -33,7 +33,7 @@ async function main() {
 
   const publishCh = await conn.createConfirmChannel();
 
-  await subscribeMsgPack(
+  subscribeMsgPack(
     conn,
     ExchangePerilTopic,
     GameLogSlug,
@@ -45,33 +45,30 @@ async function main() {
   printServerHelp();
 
   while (true) {
-    const words = await getInput('Enter command: ');
-    const [command] = words;
-    if (!command) {
-      continue;
-    }
-    if (command === COMMAND_TYPES.pause) {
-      console.log(`Publishing "${COMMAND_TYPES.pause}" game state...`);
+    const words = await getInput();
+    if (words.length === 0) continue;
 
+    const command = words[0];
+    if (command === 'pause') {
+      console.log('Publishing paused game state');
       try {
-        await publishJSON(publishCh, ExchangePerilDirect, COMMAND_TYPES.pause, {
+        await publishJSON(publishCh, ExchangePerilDirect, PauseKey, {
           isPaused: true,
         });
       } catch (err) {
-        console.error('Error publishing message:', err);
+        console.error('Error publishing pause message:', err);
       }
-    } else if (command === COMMAND_TYPES.resume) {
-      console.log(`Publishing "${COMMAND_TYPES.resume}" game state...`);
-
+    } else if (command === 'resume') {
+      console.log('Publishing resumed game state');
       try {
-        await publishJSON(publishCh, ExchangePerilDirect, COMMAND_TYPES.pause, {
+        await publishJSON(publishCh, ExchangePerilDirect, PauseKey, {
           isPaused: false,
         });
       } catch (err) {
-        console.error('Error publishing message:', err);
+        console.error('Error publishing resume message:', err);
       }
-    } else if (command === COMMAND_TYPES.quit) {
-      console.log(`Goodbye!`);
+    } else if (command === 'quit') {
+      console.log('Goodbye!');
       process.exit(0);
     } else {
       console.log('Unknown command');

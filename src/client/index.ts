@@ -1,4 +1,4 @@
-import amqp, { type ConfirmChannel } from 'amqplib';
+import amqp from 'amqplib';
 import {
   clientWelcome,
   commandStatus,
@@ -10,10 +10,10 @@ import {
 import { SimpleQueueType, subscribeJSON } from '../internal/pubsub/consume.js';
 import {
   ArmyMovesPrefix,
-  COMMAND_TYPES,
   ExchangePerilDirect,
   ExchangePerilTopic,
   GameLogSlug,
+  PauseKey,
   WarRecognitionsPrefix,
 } from '../internal/routing/routing.js';
 import { GameState } from '../internal/gamelogic/gamestate.js';
@@ -56,6 +56,15 @@ async function main() {
 
   await subscribeJSON(
     conn,
+    ExchangePerilDirect,
+    `${PauseKey}.${username}`,
+    PauseKey,
+    SimpleQueueType.Transient,
+    handlerPause(gs),
+  );
+
+  await subscribeJSON(
+    conn,
     ExchangePerilTopic,
     WarRecognitionsPrefix,
     `${WarRecognitionsPrefix}.*`,
@@ -63,29 +72,16 @@ async function main() {
     handlerWar(gs, publishCh),
   );
 
-  await subscribeJSON(
-    conn,
-    ExchangePerilDirect,
-    `${COMMAND_TYPES.pause}.${username}`,
-    COMMAND_TYPES.pause,
-    SimpleQueueType.Transient,
-    handlerPause(gs),
-  );
-
   while (true) {
-    const words = await getInput('Enter command: ');
-    const [command, spamValue] = words;
-
-    if (command === COMMAND_TYPES.spawn) {
-      try {
-        commandSpawn(gs, words);
-      } catch (err) {
-        console.log((err as Error).message);
-      }
-    } else if (command === COMMAND_TYPES.move) {
+    const words = await getInput();
+    if (words.length === 0) {
+      continue;
+    }
+    const command = words[0];
+    if (command === 'move') {
       try {
         const move = commandMove(gs, words);
-        await publishJSON(
+        publishJSON(
           publishCh,
           ExchangePerilTopic,
           `${ArmyMovesPrefix}.${username}`,
@@ -94,63 +90,73 @@ async function main() {
       } catch (err) {
         console.log((err as Error).message);
       }
-    } else if (command === COMMAND_TYPES.status) {
+    } else if (command === 'status') {
       commandStatus(gs);
-    } else if (command === COMMAND_TYPES.help) {
-      printClientHelp();
-    } else if (command === COMMAND_TYPES.spam) {
-      if (spamValue) {
-        const spamNum = parseInt(spamValue);
-        if (isNaN(spamNum)) {
-          console.log(`error: ${spamValue} is not a valid number`);
-          continue;
-        }
-
-        for (let i = 1; i <= spamNum; i++) {
-          try {
-            publishJSON(
-              publishCh,
-              ExchangePerilTopic,
-              `${GameLogSlug}.${username}`,
-              getMaliciousLog(),
-            );
-          } catch (err) {
-            console.error(
-              'Failed to publish spam message:',
-              (err as Error).message,
-            );
-            continue;
-          }
-        }
-      } else {
-        console.log('usage: spam <n>');
+    } else if (command === 'spawn') {
+      try {
+        commandSpawn(gs, words);
+      } catch (err) {
+        console.log((err as Error).message);
       }
-    } else if (command === COMMAND_TYPES.quit) {
+    } else if (command === 'help') {
+      printClientHelp();
+    } else if (command === 'quit') {
       printQuit();
       process.exit(0);
+    } else if (command === 'spam') {
+      if (words.length < 2) {
+        console.log('usage: spam <n>');
+        continue;
+      }
+      const raw = words[1];
+      if (!raw) {
+        console.log('usage: spam <n>');
+        continue;
+      }
+      const n = parseInt(raw, 10);
+      if (isNaN(n)) {
+        console.log(`error: ${words[1]} is not a valid number`);
+        continue;
+      }
+      for (let i = 0; i < n; i++) {
+        try {
+          await publishGameLog(publishCh, gs.getUsername(), getMaliciousLog());
+        } catch (err) {
+          console.error(
+            'Failed to publish spam message:',
+            (err as Error).message,
+          );
+          continue;
+        }
+      }
+      console.log(`Published ${n} malicious logs`);
     } else {
       console.log('Unknown command');
+      continue;
     }
   }
+}
+
+export function publishGameLog(
+  ch: amqp.ConfirmChannel,
+  username: string,
+  message: string,
+): Promise<void> {
+  const log: GameLog = {
+    currentTime: new Date(),
+    message,
+    username,
+  };
+
+  return publishMsgPack(
+    ch,
+    ExchangePerilTopic,
+    `${GameLogSlug}.${username}`,
+    log,
+  );
 }
 
 main().catch((err) => {
   console.error('Fatal error:', err);
   process.exit(1);
 });
-
-export function publishGameLog(props: {
-  ch: ConfirmChannel;
-  username: string;
-  message: string;
-}) {
-  const { ch, message, username } = props;
-
-  const gameLog: GameLog = {
-    currentTime: new Date(),
-    message,
-    username,
-  };
-
-  publishMsgPack(ch, ExchangePerilTopic, `${GameLogSlug}.${username}`, gameLog);
-}
