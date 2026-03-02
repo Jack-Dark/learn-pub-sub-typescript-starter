@@ -1,26 +1,39 @@
-import amqp, { type ConfirmChannel } from "amqplib";
-import { clientWelcome, commandStatus, getInput, printClientHelp, printQuit } from "../internal/gamelogic/gamelogic.js";
-import { SimpleQueueType, subscribeJSON } from "../internal/pubsub/consume.js";
-import { ArmyMovesPrefix, COMMAND_TYPES, ExchangePerilDirect, ExchangePerilTopic, GameLogSlug, WarRecognitionsPrefix } from "../internal/routing/routing.js";
-import { GameState } from "../internal/gamelogic/gamestate.js";
-import { commandSpawn } from "../internal/gamelogic/spawn.js";
-import { commandMove } from "../internal/gamelogic/move.js";
-import { handlerMove, handlerPause, handlerWar } from "./handlers.js";
-import { publishJSON, publishMsgPack } from "../internal/pubsub/publish.js";
-import type { GameLog } from "../internal/gamelogic/logs.js";
+import amqp, { type ConfirmChannel } from 'amqplib';
+import {
+  clientWelcome,
+  commandStatus,
+  getInput,
+  printClientHelp,
+  printQuit,
+} from '../internal/gamelogic/gamelogic.js';
+import { SimpleQueueType, subscribeJSON } from '../internal/pubsub/consume.js';
+import {
+  ArmyMovesPrefix,
+  COMMAND_TYPES,
+  ExchangePerilDirect,
+  ExchangePerilTopic,
+  GameLogSlug,
+  WarRecognitionsPrefix,
+} from '../internal/routing/routing.js';
+import { GameState } from '../internal/gamelogic/gamestate.js';
+import { commandSpawn } from '../internal/gamelogic/spawn.js';
+import { commandMove } from '../internal/gamelogic/move.js';
+import { handlerMove, handlerPause, handlerWar } from './handlers.js';
+import { publishJSON, publishMsgPack } from '../internal/pubsub/publish.js';
+import type { GameLog } from '../internal/gamelogic/logs.js';
 
 async function main() {
-  const rabbitConnString = "amqp://guest:guest@localhost:5672/";
+  const rabbitConnString = 'amqp://guest:guest@localhost:5672/';
   const conn = await amqp.connect(rabbitConnString);
-  console.log("Peril game client connected to RabbitMQ!");
+  console.log('Peril game client connected to RabbitMQ!');
 
-  ["SIGINT", "SIGTERM"].forEach((signal) =>
+  ['SIGINT', 'SIGTERM'].forEach((signal) =>
     process.on(signal, async () => {
       try {
         await conn.close();
-        console.log("RabbitMQ connection closed.");
+        console.log('RabbitMQ connection closed.');
       } catch (err) {
-        console.error("Error closing RabbitMQ connection:", err);
+        console.error('Error closing RabbitMQ connection:', err);
       } finally {
         process.exit(0);
       }
@@ -58,7 +71,6 @@ async function main() {
     handlerPause(gs),
   );
 
-
   while (true) {
     const words = await getInput('Enter command: ');
     const [command] = words;
@@ -76,7 +88,7 @@ async function main() {
           publishCh,
           ExchangePerilTopic,
           `${ArmyMovesPrefix}.${username}`,
-          move
+          move,
         );
       } catch (err) {
         console.log((err as Error).message);
@@ -86,30 +98,33 @@ async function main() {
     } else if (command === COMMAND_TYPES.help) {
       printClientHelp();
     } else if (command === COMMAND_TYPES.spam) {
-      console.log("Spamming not allowed yet!")
+      console.log('Spamming not allowed yet!');
     } else if (command === COMMAND_TYPES.quit) {
       printQuit();
-      process.exit(0)
+      process.exit(0);
     } else {
-      console.log("Unknown command")
+      console.log('Unknown command');
     }
   }
 }
 
 main().catch((err) => {
-  console.error("Fatal error:", err);
+  console.error('Fatal error:', err);
   process.exit(1);
 });
 
-
-export function publishGameLog(props: { ch: ConfirmChannel, username: string, message: string }) {
-  const { ch, message, username, } = props;
+export function publishGameLog(props: {
+  ch: ConfirmChannel;
+  username: string;
+  message: string;
+}) {
+  const { ch, message, username } = props;
 
   const gameLog: GameLog = {
     currentTime: new Date(),
     message,
     username,
-  }
+  };
 
-  publishMsgPack(ch, ExchangePerilTopic, `${GameLogSlug}.${username}`, gameLog)
+  publishMsgPack(ch, ExchangePerilTopic, `${GameLogSlug}.${username}`, gameLog);
 }
